@@ -151,6 +151,33 @@ Running the file will save checkpoints in the folder 'code-llama-models'
 
 ---
 
+## Generator code for evaluation - BLEU
+
+### StarCoder finetuning
+
+---
+
+### CodeLlama finetuning
+
+Run the command:
+
+```
+python generator/fid/test_reader_simple_llama.py \
+    --model_path codellama/CodeLlama-7b-Instruct-hf \
+    --eval_data data/${ds}/fid.cmd_test.codet5_small.t10.json \
+    --per_gpu_batch_size 8 \
+    --n_context 10 \
+    --name ${ds}.llama.top10 \
+    --checkpoint_dir models/generator  \
+    --result_tag test_same \
+    --main_port 81692
+```
+
+Here the eval_data path is a path to our test data, which is a subset of the original fid.cmd_test.codet5.t10.json. 
+Results will be saved to test_results_same.json
+
+---
+
 ## Pass@k
 
 There are two notebooks titled Generate_preds.ipynb and Test_results.ipynb. These notebooks also create the required .json files needed to run the inference codes.
