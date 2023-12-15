@@ -10,7 +10,7 @@ Asmita Hajra (ahajra)
 
 This repository contains the code for Assignment 4 of the course Advanced Natural Language Processing. 
 
-In this repository, we dervie from the research paper titled DocPrompting -
+In this repository, we derive from the research paper titled DocPrompting -
 
 Shuyan Zhou, Uri Alon, Frank F. Xu, Zhiruo Wang, Zhengbao Jiang, Graham Neubig, ["DocPrompting: Generating Code by Retrieving the Docs"](https://arxiv.org/pdf/2207.05987.pdf),
 ICLR'2023 (**Spotlight**) 
