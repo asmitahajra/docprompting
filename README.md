@@ -153,11 +153,11 @@ Running the file will save checkpoints in the folder 'code-llama-models'
 
 ## Generator code for evaluation - BLEU
 
-### StarCoder finetuning
+### StarCoder evaluation
 
 ---
 
-### CodeLlama finetuning
+### CodeLlama evaluation
 
 Run the command:
 
