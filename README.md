@@ -119,6 +119,17 @@ In the file, initialize the train_dataset and eval_dataset variables to your tra
 
 Running the files will save checkpoints in the folder 'code-llama-models' for CodeLlama and in the folder 'starcoder-models' for StarCoder.
 
+```
+Note: StarCoder is a Gated Model, to be able to access and use it, please use the steps below:
+
+a) Accept the license agreement on https://huggingface.co/bigcode/starcoder
+
+b) Get access token for starcoder from https://huggingface.co/settings/tokens
+
+c) Run 'huggingface-cli login' and use token obtained in step b above.
+
+```
+
 ---
 
 ## Generator Code for Evaluation - BLEU
