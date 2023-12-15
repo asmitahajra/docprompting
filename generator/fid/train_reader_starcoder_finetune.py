@@ -159,7 +159,7 @@ tokenizer = AutoTokenizer.from_pretrained("bigcode/starcoder")
 
 print("final op after fine tune")
 
-output_dir="sql-starcoder/checkpoint-3"
+output_dir="starcoder-models"
 
 from peft import PeftModel
 model = PeftModel.from_pretrained(model, output_dir)
