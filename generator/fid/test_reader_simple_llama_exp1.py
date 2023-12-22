@@ -50,7 +50,7 @@ def evaluate(model, dataset, dataloader, tokenizer, opt):
 
         with open(f"{opt.checkpoint_path}/gold.gold", "w+") as fg, \
                 open(f'{opt.checkpoint_path}/pred.pred', 'w+') as fp, \
-                open(opt.result_file, 'w+') as fr, open('data/conala/fid.cmd_test.codet5.t10_small.json') as data_file:
+                open(opt.result_file, 'w+') as fr, open('data/conala/fid.cmd_test.codet5.t10.json') as data_file:
                 
             # for i, batch in enumerate(tqdm(dataloader, disable=TQDM_DISABLED)):
             #     (idx, _, _, context_ids, context_mask) = batch
@@ -107,10 +107,18 @@ def evaluate(model, dataset, dataloader, tokenizer, opt):
                     # device_map="auto",
                     # )
 
-                    system = "Provide answers in Python. "
-                    system+="Context: "
-                    system+= each['ctxs'][0]['text']
-                    user = each['question']
+                    # system = "Give a one line Python code asssuming initialisation done. Don't provide explanation.  Give answer after tag Answer: \n Use the following References:\n"
+                    system = "Give a one line Python code asssuming initialisation done. Don't provide explanation. Give answer after tag Answer: \n"
+
+                    # system+="Context: "
+                    # system+= each['ctxs'][0]['text']
+
+                    # for i in range(1):
+                    #     system+="Ref "+str(i+1)+": "
+                    #     system+= each['ctxs'][i]['text']
+                    #     system+="\n\n"
+
+                    user = "Question: "+each['question']
                     # prompt = f"<s><<SYS>>\n{system}\n<</SYS>>\n\n{user}"
                     # prompt = f"<s>[INST] <<SYS>>\\n{system}\\n<</SYS>>\\n\\n{user}[/INST]"
                     prompt = f"<s><<SYS>>\n{system}\n<</SYS>>\n\n{user}"
@@ -132,9 +140,13 @@ def evaluate(model, dataset, dataloader, tokenizer, opt):
                     do_sample=True,
                     top_p=0.95,
                     temperature=0.1,
-                    max_length=200
+                    # max_length=200,
+                    max_new_tokens=100, #128, #more
+                    top_k=10,
+                    num_return_sequences=1,
+                    eos_token_id=tokenizer.eos_token_id
                     )
-                    
+
                     # print("reached here")
 
                     if opt.num_return_sequences == 1:
@@ -160,8 +172,49 @@ def evaluate(model, dataset, dataloader, tokenizer, opt):
                         # gold = dataset.get_example(idx[k])['target']
                         # print("typeeeee",type(prompt))
                         gold = each['target']
-                        ans = ans.replace("{{", " {{").replace("\n", ' ').replace("\r", "").replace("<pad>", "").replace("<s>", "").replace("</s>", "").strip()
-                        ans = " ".join(ans.split())
+
+                        possys = ans.find("<</SYS>>")
+
+                        if possys != -1:
+                            respos = ans[possys + len("<</SYS>>"):]
+                        else:
+                            respos = ans  # or handle the "not found" case differently
+
+                        posans = respos.find("Answer:")
+
+                        # Slice the string from just after the word if found
+                        if posans != -1:
+                            resans = respos[posans + len("Answer:"):]
+                        else:
+                            resans = respos
+
+                        parts_ref = resans.split("References", 1)
+                        resref = parts_ref[0].strip()
+
+                        # posref = resans.find("References")
+
+                        # Slice the string up to the word if found, else keep the whole string
+                        # resref = resans[:posref] if posref != -1 else resans
+
+                        # print(result)  # Output will be everything before "Keyword"
+
+                        # print("res after answer:", respos)  # Output includes everything after "Keyword"
+                        # refined_ans = resans.replace("{{", " {{").replace("\n", ' ').replace("\r", "").replace("<pad>", "").replace("<s>", "").replace("</s>", "").strip()
+                        # refined_ans = resref.replace("{{", " {{").replace("\n", ' ').replace("\r", "").replace("<pad>", "").replace("<s>", "").replace("</s>", "").replace("```", "").strip()
+                        repl_ans = resref.replace("{{", " {{").replace("\r", "").replace("<pad>", "").replace("<s>", "").replace("</s>", "").replace("```", "").replace(">>>", "")
+
+                        # python or imports
+                        lines = repl_ans.split('\n')
+
+                        filtered_lines = [line for line in lines if not (line.startswith("python") or "import" in line)]
+
+                        # Join the lines back into a single string
+                        result = '\n'.join(filtered_lines)
+
+                        refined_ans = result.replace("\n", ' ').strip()
+
+                        ans = " ".join(refined_ans.split())
+                        print("the refined ans is", ans)
                         gold = gold.replace("\n", ' ')
                         fg.write(f"{gold}\n")
                         fp.write(f"{ans}\n")
@@ -218,7 +271,8 @@ if __name__ == "__main__":
     src.slurm.init_signal_handler()
     opt.train_batch_size = opt.per_gpu_batch_size * max(1, opt.world_size)
     opt.checkpoint_path = Path(opt.checkpoint_dir) / opt.name
-    opt.result_file = Path(opt.checkpoint_dir) / opt.name / f'test_results_{opt.result_tag}.json'
+    opt.result_file = Path(opt.checkpoint_dir) / opt.name / f'test_results_{opt.result_tag}_500.json'
+    # opt.result_file = Path(opt.checkpoint_dir) / opt.name / f'test_results_{opt.result_tag}.json'
 
     dir_path = Path(opt.checkpoint_dir) / opt.name
     directory_exists = dir_path.exists()
@@ -255,6 +309,7 @@ if __name__ == "__main__":
         # use the global rank and world size attibutes to split the eval set on multiple gpus
         world_size=opt.world_size
     )
+
     eval_dataset = src.data.Dataset(
         eval_examples,
         opt.n_context,
@@ -294,7 +349,7 @@ if __name__ == "__main__":
     logger.info("Start eval")
     score, total = evaluate(model, eval_dataset, eval_dataloader, tokenizer, opt)
     print("score is", score)
-
+    
     logger.info(f'Total number of example {total}')
     logger.info(json.dumps(score, indent=2))
 
