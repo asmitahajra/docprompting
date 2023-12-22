@@ -1,4 +1,4 @@
-# ANLP Assignment 3: DocPrompting: Generating Code by Retrieving the Docs
+# ANLP Assignment 4: DocPrompting: Generating Code by Retrieving the Docs
 
 ## Team ID: 30
 Team Members:   
@@ -10,7 +10,7 @@ Asmita Hajra (ahajra)
 
 This repository contains the code for Assignment 4 of the course Advanced Natural Language Processing. 
 
-In this repository, we dervie from the research paper titled DocPrompting -
+In this repository, we derive from the research paper titled DocPrompting -
 
 Shuyan Zhou, Uri Alon, Frank F. Xu, Zhiruo Wang, Zhengbao Jiang, Graham Neubig, ["DocPrompting: Generating Code by Retrieving the Docs"](https://arxiv.org/pdf/2207.05987.pdf),
 ICLR'2023 (**Spotlight**) 
@@ -97,27 +97,28 @@ python retriever/simcse/run_inference.py \
 The results will be saved to `data/conala/retrieval_results.json`.
 
 ---
-## Generation code
+## Generator Code for Finetuning
 
+### CodeLlama and StarCoder Finetuning
 
-### StarCoder generation
+Run the file: python generator/fid/train_reader_llama_finetune.py for CodeLlama and the file python generator/fid/train_reader_starcoder_finetune.py for StarCoder.
 
-```bash
-ds='conala'
-python generator/fid/train_reader_starcoder.py
-    --seed 1996 \
-    --train_data data/${ds}/fid.cmd_train.codet5.t10.json \
-    --eval_data data/${ds}/fid.cmd_dev.codet5.t10.json \
-    --model_name bigcode/starcoder \
-    --per_gpu_batch_size 4 \
-    --n_context 10 \
-    --name ${ds}.starcoder.top10 \
-    --checkpoint_dir models/generator/ \
-    --eval_freq 500 \
-    --accumulation_steps 2 \
-    --main_port 30843 \
-    --total_steps 20000 \
-    --warmup_steps 2000 \
+In the file, initialize the train_dataset and eval_dataset variables to your train and evaluation dataset respectively. We have used a subset of the fid.cmd_train.codet5.t10.json and fid.cmd_dev.codet5.t10.json respectively and kept the fields 'question', 'context' from the original 'ctxs's text field, and 'answer' from 'target'. That is, in the following format -
+
+```
+[
+  {
+    "question": "Get pandas GroupBy object with sum over the rows with same column names within  dataframe `df`",
+    "context": "pandas.core.groupby.DataFrameGroupBy.count   DataFrameGroupBy.count()[source]\n \nCompute count of group, excluding missing values.  Returns \n Series or DataFrame\n\nCount of values within each group.      See also  Series.groupby\n\nApply a function groupby to a Series.  DataFrame.groupby\n\nApply a function groupby to each row or column of a DataFrame.",
+    "answer": "df.groupby(df.columns, axis=1).sum()"
+  },
+...
+...
+]
+```
+
+Running the files will save checkpoints in the folder 'code-llama-models' for CodeLlama and in the folder 'starcoder-models' for StarCoder.
+
 ```
 Note: StarCoder is a Gated Model, to be able to access and use it, please use the steps below:
 
@@ -127,27 +128,51 @@ b) Get access token for starcoder from https://huggingface.co/settings/tokens
 
 c) Run 'huggingface-cli login' and use token obtained in step b above.
 
+```
+
 ---
 
-### CodeLlama generation
+## Generator Code for Evaluation - BLEU
 
-```bash
-ds='conala'
-python generator/fid/train_reader_llama.py \
-    --seed 1996 \
-    --train_data data/${ds}/fid.cmd_train.codet5.t10.json \
-    --eval_data data/${ds}/fid.cmd_dev.codet5.t10.json \
-    --model_name codellama/CodeLlama-7b-Instruct-hf \
-    --per_gpu_batch_size 1 \
-    --n_context 10 \
-    --name ${ds}.codellama7.top10 \
-    --checkpoint_dir models/generator/ \
-    --eval_freq 500 \
-    --accumulation_steps 2 \
-    --main_port 30843 \
-    --total_steps 20000 \
-    --warmup_steps 2000
+### StarCoder evaluation
+
+Run the command:
+
 ```
+python generator/fid/test_reader_simple_starcoder.py \
+    --model_path bigcode/starcoder \
+    --eval_data data/${ds}/fid.cmd_test.codet5_small.t10.json \
+    --per_gpu_batch_size 8 \
+    --n_context 10 \
+    --checkpoint_dir models/generator
+    --result_tag test_same \
+    --main_port 81692
+
+```
+
+Here, the eval_data path is a path to our test data, which is a subset of the original fid.cmd_test.codet5.t10.json. 
+Results will be saved to test_results_test_same.json
+
+---
+
+### CodeLlama evaluation
+
+Run the command:
+
+```
+python generator/fid/test_reader_simple_llama.py \
+    --model_path codellama/CodeLlama-7b-Instruct-hf \
+    --eval_data data/${ds}/fid.cmd_test.codet5_small.t10.json \
+    --per_gpu_batch_size 8 \
+    --n_context 10 \
+    --name ${ds}.llama.top10 \
+    --checkpoint_dir models/generator  \
+    --result_tag test_same \
+    --main_port 81692
+```
+
+Here the eval_data path is a path to our test data, which is a subset of the original fid.cmd_test.codet5.t10.json. 
+Results will be saved to test_results_same.json
 
 ---
 
